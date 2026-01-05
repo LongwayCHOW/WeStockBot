@@ -1,0 +1,30 @@
+name: Daily Push
+
+on:
+  schedule:
+    # 北京时间 07:30 = UTC 23:30 （有延迟）
+    # 每天（周一到周日）都运行
+    - cron: '30 23 * * *'
+  workflow_dispatch: # 允许手动测试
+
+jobs:
+  run_script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run script
+        env:
+          # 会去读配置的保险箱
+          SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
+          TZ: Asia/Shanghai
+        run: python main.py
