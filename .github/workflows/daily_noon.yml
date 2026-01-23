@@ -1,0 +1,28 @@
+name: Noon Valuation Radar
+
+on:
+  schedule:
+    # 北京时间 13:00 = UTC时间 05:00
+    - cron: "0 5 * * *"
+  workflow_dispatch: # 允许手动点击测试
+
+jobs:
+  run_noon_radar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: pip install akshare pandas requests
+
+      - name: Run Noon Script
+        env:
+          SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
+          TZ: Asia/Shanghai
+        run: python noon_valuation.py

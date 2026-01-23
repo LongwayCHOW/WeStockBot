@@ -28,70 +28,80 @@ def parse_money(value):
         return 0.0
 
 def get_market_analysis():
-    print("🌙 正在生成【A股复盘】(使用资金流接口)...")
+    print("🌙 正在生成【A股复盘】(CSV持久化版)...")
     summary_lines = []
     
+    # 定义 CSV 路径
+    csv_path = os.path.join("data", "history_fund_flow.csv")
+    
     try:
-        # === 核心修改：使用资金流向专用接口 ===
-        # indicator="今日" 代表获取当天的实时资金流排行
-        # 返回列名通常包含：['名称', '今日涨跌幅', '今日主力净流入', '今日超大单净流入'...]
+        # 1. 获取今日数据
+        df_today = ak.stock_sector_fund_flow_rank(indicator="今日", sector_type="行业资金流")
+        today_str = datetime.datetime.now().strftime("%Y-%m-%d")
         
-        # 1. 抓取行业数据
-        df_ind = ak.stock_sector_fund_flow_rank(indicator="今日", sector_type="行业资金流")
+        # 2. 清洗今日数据
+        # 提取需要的列：名称, 涨跌幅, 主力净流入
+        name_col = next((x for x in df_today.columns if "名称" in x), "名称")
+        pct_col = next((x for x in df_today.columns if "涨跌幅" in x), "今日涨跌幅")
+        flow_col = next((x for x in df_today.columns if "主力净流入" in x), "今日主力净流入")
         
-        # 2. 抓取概念数据
-        df_con = ak.stock_sector_fund_flow_rank(indicator="今日", sector_type="概念资金流")
+        # 整理成标准格式 List[Dict]
+        today_records = []
+        for _, row in df_today.iterrows():
+            today_records.append({
+                "date": today_str,
+                "name": row[name_col],
+                "pct": float(str(row[pct_col]).replace('%','')),
+                "flow": parse_money(row[flow_col])
+            })
+            
+        # 3. 读取并更新 CSV
+        if os.path.exists(csv_path):
+            df_hist = pd.read_csv(csv_path)
+            # 删除今天已有的数据（防止重复运行导致重复）
+            df_hist = df_hist[df_hist['date'] != today_str]
+        else:
+            df_hist = pd.DataFrame(columns=["date", "name", "pct", "flow"])
+            
+        # 合并
+        df_new = pd.DataFrame(today_records)
+        df_final = pd.concat([df_hist, df_new], ignore_index=True)
         
-        # 3. 确定列名 (防止接口字段微调)
-        # 自动寻找包含 "涨跌幅" 和 "主力净流入" 的列
-        name_col = next((x for x in df_ind.columns if "名称" in x), "名称")
-        pct_col = next((x for x in df_ind.columns if "涨跌幅" in x), "今日涨跌幅")
-        flow_col = next((x for x in df_ind.columns if "主力净流入" in x), "今日主力净流入")
-
-        # === 分析 1: 领涨行业 (按涨跌幅排序) ===
-        # 转换涨跌幅为浮点数以便排序 (去掉%)
-        df_ind['sort_pct'] = df_ind[pct_col].astype(str).str.replace('%','').astype(float)
-        top_ind = df_ind.sort_values(by='sort_pct', ascending=False).head(3)
+        # 保存回 CSV
+        df_final.to_csv(csv_path, index=False)
+        print(f"✅ 数据已更新至 {csv_path}")
         
-        summary_lines.append("🔥 **领涨行业**:")
-        for _, row in top_ind.iterrows():
-            name = row[name_col]
-            pct = row[pct_col]
-            # 清洗资金数据
-            flow_val = parse_money(row[flow_col])
-            summary_lines.append(f"• **{name}**: {pct} (主力 {flow_val:+.1f}亿)")
-        summary_lines.append("")
-
-        # === 分析 2: 热门概念 ===
-        df_con['sort_pct'] = df_con[pct_col].astype(str).str.replace('%','').astype(float)
-        top_con = df_con.sort_values(by='sort_pct', ascending=False).head(3)
+        # 4. 生成最近 5 个交易日的报告
+        # 获取所有唯一的日期，并倒序排列
+        all_dates = sorted(df_final['date'].unique(), reverse=True)
+        recent_dates = all_dates[:5] # 取最近 5 天
         
-        summary_lines.append("💡 **热门概念**:")
-        for _, row in top_con.iterrows():
-            name = row[name_col]
-            pct = row[pct_col]
-            summary_lines.append(f"• {name}: {pct}")
-        summary_lines.append("")
-
-        # === 分析 3: 主力抢筹 (按净流入排序) ===
-        # 先把资金列全部转为数字(亿元)用于排序
-        df_ind['sort_flow'] = df_ind[flow_col].apply(parse_money)
-        top_flow = df_ind.sort_values(by='sort_flow', ascending=False).head(3)
-        
-        summary_lines.append("💰 **主力抢筹**:")
-        for _, row in top_flow.iterrows():
-            name = row[name_col]
-            flow_val = row['sort_flow']
-            pct = row[pct_col]
-            summary_lines.append(f"• **{name}**: {flow_val:+.1f}亿 (涨幅 {pct})")
-
+        for date_str in recent_dates:
+            # 筛选该日数据
+            day_data = df_final[df_final['date'] == date_str]
+            
+            # 找出领涨 Top 3
+            top_gainers = day_data.sort_values(by='pct', ascending=False).head(3)
+            # 找出流入 Top 3
+            top_flows = day_data.sort_values(by='flow', ascending=False).head(3)
+            
+            summary_lines.append(f"� **{date_str}**")
+            
+            line_gainers = []
+            for _, row in top_gainers.iterrows():
+                line_gainers.append(f"{row['name']} {row['pct']}%")
+            summary_lines.append(f"🔥 领涨: {', '.join(line_gainers)}")
+            
+            line_flows = []
+            for _, row in top_flows.iterrows():
+                line_flows.append(f"{row['name']} {row['flow']:+.1f}亿")
+            summary_lines.append(f"💰 抢筹: {', '.join(line_flows)}")
+            
+            summary_lines.append("")
+            
         # 生成标题
-        first_name = top_ind.iloc[0][name_col]
-        first_pct = top_ind.iloc[0][pct_col]
-        title = f"A股复盘: {first_name} {first_pct} | 主力动向"
-        
-        today = datetime.datetime.now().strftime("%m-%d %H:%M")
-        content = f"📅 {today}\n\n" + "\n\n".join(summary_lines)
+        title = f"A股复盘: {today_str} (近{len(recent_dates)}日追踪)"
+        content = "\n".join(summary_lines)
         return title, content
 
     except Exception as e:
