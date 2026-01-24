@@ -217,99 +217,114 @@ TARGETS = [
     }
 ]
 
-def find_column(df, keywords):
-    """
-    在 DataFrame 中查找匹配关键词的列名
-    """
-    # 1. 精确匹配
-    for kw in keywords:
-        if kw in df.columns:
-            return kw
-    # 2. 模糊匹配
-    for col in df.columns:
-        for kw in keywords:
-            if kw in str(col):
-                return col
-    return None
-
 def get_realtime_data(targets):
     """
-    批量获取 A 股和港股的实时估值数据
-    返回字典: {'600519': {'pe_ttm': 20.5, 'pb': 5.1, 'dv_ratio': 2.8, 'price': 1500}, ...}
+    [精准版] 批量获取 A 股和港股的实时估值数据
+    直接请求东方财富 ulist 接口，只查询目标股票，避免拉取全市场数据导致的超时和缺失。
     """
     data_map = {}
     
-    # 1. 分离 A 股和 H 股代码
-    a_codes = [t['code'] for t in targets if t['type'] == 'A']
-    h_codes = [t['code'] for t in targets if t['type'] == 'H']
+    # 1. 构造 secids (东方财富的股票ID)
+    # 规则: 
+    #   沪A(6开头) -> 1.xxxxxx
+    #   深A(0/3开头) -> 0.xxxxxx
+    #   港股 -> 116.xxxxx
+    secids = []
     
-    # 2. 抓取 A 股数据 (ak.stock_zh_a_spot_em)
-    if a_codes:
-        print("📡 正在拉取 A 股实时数据...")
-        try:
-            df_a = ak.stock_zh_a_spot_em()
-            # 过滤出我们关注的股票
-            # 查找代码列
-            col_code = find_column(df_a, ["代码", "f12"]) or "代码"
-            if col_code in df_a.columns:
-                df_a = df_a[df_a[col_code].isin(a_codes)]
-            
-                # 动态查找列名
-                col_price = find_column(df_a, ["最新价", "f2"])
-                col_pe = find_column(df_a, ["市盈率-动态", "动态市盈率", "f9"])
-                col_pb = find_column(df_a, ["市净率", "f23"])
-                col_dv = find_column(df_a, ["股息率", "f133", "f115"])
-                
-                print(f"A股列名映射: PE->{col_pe}, PB->{col_pb}, 股息->{col_dv}")
+    # 建立映射: secid -> target_code (用于后续匹配回填)
+    # 因为接口返回的是 1.600519，我们需要知道它对应 targets 里的 600519
+    secid_map = {} 
 
-                for _, row in df_a.iterrows():
-                    code = row[col_code]
-                    data_map[code] = {
-                        'price': row[col_price] if col_price else 0,
-                        'pe_ttm': row[col_pe] if col_pe else 0, 
-                        'pb': row[col_pb] if col_pb else 0,
-                        'dv_ratio': row[col_dv] if col_dv else 0
-                    }
+    print(f"📡 正在精准拉取 {len(targets)} 只目标股票数据...")
+
+    for t in targets:
+        code = t['code']
+        stype = t['type']
+        
+        secid = ""
+        if stype == 'A':
+            # 简单判断沪深
+            if str(code).startswith('6'):
+                secid = f"1.{code}"
             else:
-                print("⚠️ 无法找到 A 股代码列")
-
-        except Exception as e:
-            print(f"⚠️ A 股数据拉取失败: {e}")
-
-    # 3. 抓取 H 股数据 (ak.stock_hk_spot_em)
-    if h_codes:
-        print("📡 正在拉取 港股 实时数据...")
-        try:
-            df_h = ak.stock_hk_spot_em()
-            # 查找代码列
-            col_code = find_column(df_h, ["代码", "f12"]) or "代码"
+                secid = f"0.{code}"
+        elif stype == 'H':
+            # 港股通常是 116
+            secid = f"116.{code}"
             
-            if col_code in df_h.columns:
-                # 港股代码 akshare 返回的是 5位 (如 '00700')
-                df_h = df_h[df_h[col_code].isin(h_codes)]
-                
-                # 动态查找列名
-                col_price = find_column(df_h, ["最新价", "f2"])
-                col_pe = find_column(df_h, ["市盈率-动态", "市盈率(动)", "f9"])
-                col_pb = find_column(df_h, ["市净率", "f23"])
-                col_dv = find_column(df_h, ["股息率", "f133", "f115"])
+        if secid:
+            secids.append(secid)
+            secid_map[secid] = code
 
-                print(f"港股列名映射: PE->{col_pe}, PB->{col_pb}, 股息->{col_dv}")
+    # 2. 发送请求
+    # 字段: f12(代码), f14(名称), f2(最新价), f9(PE-TTM), f23(PB), f133(股息率-港), f115(股息率-A)
+    # 注意: A股股息率有时在 f115, 港股在 f133, 我们都请求
+    fields = "f12,f14,f2,f9,f23,f133,f115"
+    secids_str = ",".join(secids)
+    
+    # 使用 ulist.np 接口，这是东方财富的"自选股/个股列表"接口，更加稳定
+    # ut 参数是必要的 token
+    url = "https://push2.eastmoney.com/api/qt/ulist.np/get"
+    params = {
+        "ut": "f057cbcbce2a86e2866ab8877db1d059",
+        "invt": "2",
+        "fltt": "2",
+        "fields": fields,
+        "secids": secids_str
+    }
+    
+    # 伪装浏览器头
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
 
-                for _, row in df_h.iterrows():
-                    code = row[col_code]
-                    data_map[code] = {
-                        'price': row[col_price] if col_price else 0,
-                        'pe_ttm': row[col_pe] if col_pe else 0, 
-                        'pb': row[col_pb] if col_pb else 0,
-                        'dv_ratio': row[col_dv] if col_dv else 0
-                    }
-            else:
-                 print("⚠️ 无法找到 港股代码列")
-                
-        except Exception as e:
-            print(f"⚠️ 港股数据拉取失败: {e}")
+    try:
+        # 尝试直连 (为了兼容某些代理环境，也可以尝试去掉 verify=False)
+        # requests 默认会自动处理 302 重定向
+        resp = requests.get(url, params=params, headers=headers, timeout=10)
+        
+        if resp.status_code != 200:
+            print(f"⚠️ 接口请求失败: Status {resp.status_code}")
+            return {}
             
+        res_json = resp.json()
+        if not res_json or 'data' not in res_json or 'diff' not in res_json['data']:
+            print("⚠️ 接口返回数据为空")
+            return {}
+            
+        data_list = res_json['data']['diff']
+        print(f"✅ 成功获取 {len(data_list)} 条数据")
+        
+        for item in data_list:
+            # item 示例: {'f12': '600519', 'f14': '贵州茅台', 'f2': 1500.0, ...}
+            code = item.get('f12')
+            
+            # 解析数据 (注意处理无效值 - )
+            def parse_float(val):
+                if val == '-' or val is None: return 0.0
+                try: return float(val)
+                except: return 0.0
+
+            price = parse_float(item.get('f2'))
+            pe = parse_float(item.get('f9'))
+            pb = parse_float(item.get('f23'))
+            
+            # 股息率: 优先取 f133(港股/部分A), 如果为0则取 f115(A股)
+            dv = parse_float(item.get('f133'))
+            if dv == 0:
+                dv = parse_float(item.get('f115'))
+                
+            data_map[code] = {
+                'price': price,
+                'pe_ttm': pe,
+                'pb': pb,
+                'dv_ratio': dv
+            }
+            
+    except Exception as e:
+        print(f"❌ 数据拉取异常: {e}")
+        # 这里可以考虑增加重试逻辑
+        
     return data_map
 
 def calculate_percentile(current, buy, sell, reverse=False):
