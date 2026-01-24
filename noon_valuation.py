@@ -217,6 +217,21 @@ TARGETS = [
     }
 ]
 
+def find_column(df, keywords):
+    """
+    在 DataFrame 中查找匹配关键词的列名
+    """
+    # 1. 精确匹配
+    for kw in keywords:
+        if kw in df.columns:
+            return kw
+    # 2. 模糊匹配
+    for col in df.columns:
+        for kw in keywords:
+            if kw in str(col):
+                return col
+    return None
+
 def get_realtime_data(targets):
     """
     批量获取 A 股和港股的实时估值数据
@@ -234,15 +249,30 @@ def get_realtime_data(targets):
         try:
             df_a = ak.stock_zh_a_spot_em()
             # 过滤出我们关注的股票
-            df_a = df_a[df_a['代码'].isin(a_codes)]
-            for _, row in df_a.iterrows():
-                code = row['代码']
-                data_map[code] = {
-                    'price': row['最新价'],
-                    'pe_ttm': row['市盈率-动态'], # 注意：东方财富接口返回的是动态市盈率，近似 TTM
-                    'pb': row['市净率'],
-                    'dv_ratio': row['股息率'] # 单位 %
-                }
+            # 查找代码列
+            col_code = find_column(df_a, ["代码", "f12"]) or "代码"
+            if col_code in df_a.columns:
+                df_a = df_a[df_a[col_code].isin(a_codes)]
+            
+                # 动态查找列名
+                col_price = find_column(df_a, ["最新价", "f2"])
+                col_pe = find_column(df_a, ["市盈率-动态", "动态市盈率", "f9"])
+                col_pb = find_column(df_a, ["市净率", "f23"])
+                col_dv = find_column(df_a, ["股息率", "f133", "f115"])
+                
+                print(f"A股列名映射: PE->{col_pe}, PB->{col_pb}, 股息->{col_dv}")
+
+                for _, row in df_a.iterrows():
+                    code = row[col_code]
+                    data_map[code] = {
+                        'price': row[col_price] if col_price else 0,
+                        'pe_ttm': row[col_pe] if col_pe else 0, 
+                        'pb': row[col_pb] if col_pb else 0,
+                        'dv_ratio': row[col_dv] if col_dv else 0
+                    }
+            else:
+                print("⚠️ 无法找到 A 股代码列")
+
         except Exception as e:
             print(f"⚠️ A 股数据拉取失败: {e}")
 
@@ -251,21 +281,31 @@ def get_realtime_data(targets):
         print("📡 正在拉取 港股 实时数据...")
         try:
             df_h = ak.stock_hk_spot_em()
-            # 港股代码 akshare 返回的是 5位 (如 '00700')
-            df_h = df_h[df_h['代码'].isin(h_codes)]
-            for _, row in df_h.iterrows():
-                code = row['代码']
-                data_map[code] = {
-                    'price': row['最新价'],
-                    'pe_ttm': 0, # 港股接口可能不直接返回 PE/PB，需注意
-                    'pb': 0,
-                    'dv_ratio': 0
-                }
-                # 尝试从列名中找 PE/PB (AkShare 港股接口列名可能有变)
-                # 常见列名: '市盈率(动)', '市净率', '股息率'
-                if '市盈率(动)' in row: data_map[code]['pe_ttm'] = row['市盈率(动)']
-                if '市净率' in row: data_map[code]['pb'] = row['市净率']
-                if '股息率' in row: data_map[code]['dv_ratio'] = row['股息率']
+            # 查找代码列
+            col_code = find_column(df_h, ["代码", "f12"]) or "代码"
+            
+            if col_code in df_h.columns:
+                # 港股代码 akshare 返回的是 5位 (如 '00700')
+                df_h = df_h[df_h[col_code].isin(h_codes)]
+                
+                # 动态查找列名
+                col_price = find_column(df_h, ["最新价", "f2"])
+                col_pe = find_column(df_h, ["市盈率-动态", "市盈率(动)", "f9"])
+                col_pb = find_column(df_h, ["市净率", "f23"])
+                col_dv = find_column(df_h, ["股息率", "f133", "f115"])
+
+                print(f"港股列名映射: PE->{col_pe}, PB->{col_pb}, 股息->{col_dv}")
+
+                for _, row in df_h.iterrows():
+                    code = row[col_code]
+                    data_map[code] = {
+                        'price': row[col_price] if col_price else 0,
+                        'pe_ttm': row[col_pe] if col_pe else 0, 
+                        'pb': row[col_pb] if col_pb else 0,
+                        'dv_ratio': row[col_dv] if col_dv else 0
+                    }
+            else:
+                 print("⚠️ 无法找到 港股代码列")
                 
         except Exception as e:
             print(f"⚠️ 港股数据拉取失败: {e}")
