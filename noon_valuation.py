@@ -358,6 +358,10 @@ def generate_report():
     data_map = get_realtime_data(TARGETS)
     lines = []
     
+    # 添加图例说明
+    lines.append("图例: 🔥极低估值 | ✅低估 | ⚖️合理 | ⚠️风险 | 🔴高估")
+    lines.append("-" * 30)
+    
     for item in TARGETS:
         code = item['code']
         name = item['name']
@@ -389,8 +393,8 @@ def generate_report():
                     # 判断状态图标
                     if pct < 0: icon = "🔥" # 极度低估 (击球区)
                     elif pct < 20: icon = "✅" # 低估
-                    elif pct > 100: icon = "⚠️" # 高估
-                    elif pct > 80: icon = "🔴" # 风险
+                    elif pct > 80: icon = "⚠️" # 风险
+                    elif pct > 100: icon = "🔴" # 高估
                     else: icon = "⚖️" # 合理
                     
                     range_str = f"{buy}-{sell}"
