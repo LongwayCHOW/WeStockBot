@@ -1,70 +1,77 @@
 # 文件名: evening_push.py
-import akshare as ak
+import requests
 import pandas as pd
 import datetime
-import requests
 import os
+import json
 import re
 
 # 1. 获取 Key
 KEYS_STR = os.getenv("SERVERCHAN_KEY", "")
 
-# 2. 辅助函数：将中文单位(亿/万)转换为数字(亿元)
-def parse_money(value):
-    try:
-        # 如果已经是数字
-        if isinstance(value, (int, float)):
-            return float(value) / 1e8
-        
-        # 如果是字符串，处理单位
-        str_val = str(value)
-        if '亿' in str_val:
-            return float(str_val.replace('亿', '')) 
-        elif '万' in str_val:
-            return float(str_val.replace('万', '')) / 10000
-        else:
-            return float(str_val) / 1e8
-    except:
-        return 0.0
-
 def get_market_analysis():
-    print("🌙 正在生成【A股复盘】(CSV持久化版)...")
+    print("🌙 正在生成【A股复盘】(Sina版)...")
     summary_lines = []
     
-    # 定义 CSV 路径
-    csv_path = os.path.join("data", "history_fund_flow.csv")
+    # 定义 CSV 路径 (使用新文件以区分旧数据源)
+    data_dir = "data"
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+    csv_path = os.path.join(data_dir, "history_sector_sina.csv")
     
     try:
-        # 1. 获取今日数据
-        df_today = ak.stock_sector_fund_flow_rank(indicator="今日", sector_type="行业资金流")
+        # 1. 获取今日数据 (Sina 行业板块)
+        url = "http://vip.stock.finance.sina.com.cn/q/view/newSinaHy.php"
+        resp = requests.get(url, timeout=10)
+        # Sina 接口通常是 GBK 编码
+        text = resp.content.decode('gbk', errors='ignore')
+        
+        # 解析 JSON: var S_Finance_bankuai_sinaindustry = {...}
+        # 提取 {...} 部分
+        start_idx = text.find('{')
+        end_idx = text.rfind('}')
+        if start_idx == -1 or end_idx == -1:
+            return "分析失败", "数据解析错误: 无法找到JSON数据"
+            
+        json_str = text[start_idx:end_idx+1]
+        data_dict = json.loads(json_str)
+        
         today_str = datetime.datetime.now().strftime("%Y-%m-%d")
-        
-        # 2. 清洗今日数据
-        # 提取需要的列：名称, 涨跌幅, 主力净流入
-        name_col = next((x for x in df_today.columns if "名称" in x), "名称")
-        pct_col = next((x for x in df_today.columns if "涨跌幅" in x), "今日涨跌幅")
-        flow_col = next((x for x in df_today.columns if "主力净流入" in x), "今日主力净流入")
-        
-        # 整理成标准格式 List[Dict]
         today_records = []
-        for _, row in df_today.iterrows():
+        
+        # 2. 清洗数据
+        # Format: "code,Name,Count,AvgPrice,ChangeAmt,ChangePct,Volume,Amount,LeaderCode,LeaderPct,LeaderPrice,LeaderChange,LeaderName"
+        for key, val_str in data_dict.items():
+            parts = val_str.split(',')
+            if len(parts) < 13: continue
+            
+            name = parts[1]
+            pct = float(parts[5])
+            amount = float(parts[7]) / 1e8 # 转为亿元
+            leader_name = parts[12]
+            leader_pct = float(parts[9])
+            
             today_records.append({
                 "date": today_str,
-                "name": row[name_col],
-                "pct": float(str(row[pct_col]).replace('%','')),
-                "flow": parse_money(row[flow_col])
+                "name": name,
+                "pct": pct,
+                "amount": amount,
+                "leader": leader_name,
+                "leader_pct": leader_pct
             })
             
+        # 转为 DataFrame
+        df_new = pd.DataFrame(today_records)
+        
         # 3. 读取并更新 CSV
         if os.path.exists(csv_path):
             df_hist = pd.read_csv(csv_path)
-            # 删除今天已有的数据（防止重复运行导致重复）
+            # 删除今天已有的数据
             df_hist = df_hist[df_hist['date'] != today_str]
         else:
-            df_hist = pd.DataFrame(columns=["date", "name", "pct", "flow"])
+            df_hist = pd.DataFrame(columns=["date", "name", "pct", "amount", "leader", "leader_pct"])
             
         # 合并
-        df_new = pd.DataFrame(today_records)
         df_final = pd.concat([df_hist, df_new], ignore_index=True)
         
         # 保存回 CSV
@@ -72,35 +79,44 @@ def get_market_analysis():
         print(f"✅ 数据已更新至 {csv_path}")
         
         # 4. 生成最近 5 个交易日的报告
-        # 获取所有唯一的日期，并倒序排列
         all_dates = sorted(df_final['date'].unique(), reverse=True)
-        recent_dates = all_dates[:5] # 取最近 5 天
+        recent_dates = all_dates[:5] 
         
         for date_str in recent_dates:
-            # 筛选该日数据
             day_data = df_final[df_final['date'] == date_str]
             
-            # 找出领涨 Top 3
-            top_gainers = day_data.sort_values(by='pct', ascending=False).head(3)
-            # 找出流入 Top 3
-            top_flows = day_data.sort_values(by='flow', ascending=False).head(3)
+            # 找出领涨 Top 5
+            top_gainers = day_data.sort_values(by='pct', ascending=False).head(5)
+            # 找出成交额 Top 3 (热度)
+            top_amounts = day_data.sort_values(by='amount', ascending=False).head(3)
             
-            summary_lines.append(f"� **{date_str}**")
+            summary_lines.append(f"📅 **{date_str}**")
             
+            # 领涨板块 + 龙头
             line_gainers = []
             for _, row in top_gainers.iterrows():
-                line_gainers.append(f"{row['name']} {row['pct']}%")
+                # 格式: 行业(2.5%) 
+                # 简化显示，避免过长
+                line_gainers.append(f"{row['name']}({row['pct']}%)")
             summary_lines.append(f"🔥 领涨: {', '.join(line_gainers)}")
             
-            line_flows = []
-            for _, row in top_flows.iterrows():
-                line_flows.append(f"{row['name']} {row['flow']:+.1f}亿")
-            summary_lines.append(f"💰 抢筹: {', '.join(line_flows)}")
+            # 热门板块 (成交额)
+            line_amounts = []
+            for _, row in top_amounts.iterrows():
+                line_amounts.append(f"{row['name']}({row['amount']:.0f}亿)")
+            summary_lines.append(f"💰 热门: {', '.join(line_amounts)}")
+            
+            # 龙头股展示 (取 Top 3 领涨板块的龙头)
+            top3_gainers = top_gainers.head(3)
+            leaders = []
+            for _, row in top3_gainers.iterrows():
+                leaders.append(f"{row['leader']} {row['leader_pct']}%")
+            summary_lines.append(f"👑 龙头: {', '.join(leaders)}")
             
             summary_lines.append("")
             
         # 生成标题
-        title = f"A股复盘: {today_str} (近{len(recent_dates)}日追踪)"
+        title = f"A股复盘: {today_str} (Sina版)"
         content = "\n".join(summary_lines)
         return title, content
 

@@ -1,4 +1,3 @@
-import akshare as ak
 import pandas as pd
 import datetime
 import requests
@@ -27,49 +26,49 @@ TARGETS = [
         "rules": [
             # 股息率只有单向大小，buy=3.5 代表大于3.5是买点，sell设为 None 或一个极低值仅作参考
             # 这里我们特殊处理：股息率不计算分位，只显示数值
-            {"metric": "pe_ttm", "buy": 25, "sell": 40, "reverse": False, "desc": "PE(极佳<20)"},
+            {"metric": "pe_ttm", "buy": 25, "sell": 40, "reverse": False, "desc": "PE-TTM(极佳<20)"},
             {"metric": "dv_ratio", "buy": 3.5, "sell": 1.5, "reverse": True, "desc": "股息率"}
         ]
     },
     {
         "code": "000858", "name": "五粮液", "type": "A",
         "rules": [
-            {"metric": "pe_ttm", "buy": 16, "sell": 30, "reverse": False, "desc": "PE(极佳<13)"},
+            {"metric": "pe_ttm", "buy": 16, "sell": 30, "reverse": False, "desc": "PE-TTM(极佳<13)"},
             {"metric": "dv_ratio", "buy": 4.0, "sell": None, "reverse": True, "desc": "股息率"}
         ]
     },
     {
         "code": "000333", "name": "美的集团", "type": "A",
         "rules": [
-            {"metric": "pe_ttm", "buy": 15, "sell": 22, "reverse": False, "desc": "PE(极佳<12)"},
+            {"metric": "pe_ttm", "buy": 15, "sell": 22, "reverse": False, "desc": "PE-TTM(极佳<12)"},
             {"metric": "dv_ratio", "buy": 5.0, "sell": None, "reverse": True, "desc": "股息率"}
         ]
     },
     {
         "code": "600436", "name": "片仔癀", "type": "A",
         "rules": [
-            {"metric": "pe_ttm", "buy": 35, "sell": 65, "reverse": False, "desc": "PE(极佳<30)"},
+            {"metric": "pe_ttm", "buy": 35, "sell": 65, "reverse": False, "desc": "PE-TTM(极佳<30)"},
             {"metric": "dv_ratio", "buy": 2.5, "sell": None, "reverse": True, "desc": "股息率"}
         ]
     },
     {
         "code": "600329", "name": "达仁堂", "type": "A",
         "rules": [
-            {"metric": "pe_ttm", "buy": 12, "sell": 28, "reverse": False, "desc": "PE(极佳<10)"},
+            {"metric": "pe_ttm", "buy": 12, "sell": 28, "reverse": False, "desc": "PE-TTM(极佳<10)"},
             {"metric": "dv_ratio", "buy": 3.0, "sell": None, "reverse": True, "desc": "股息率"}
         ]
     },
     {
         "code": "300760", "name": "迈瑞医疗", "type": "A",
         "rules": [
-            {"metric": "pe_ttm", "buy": 22, "sell": 42, "reverse": False, "desc": "PE(极佳<18)"},
+            {"metric": "pe_ttm", "buy": 22, "sell": 42, "reverse": False, "desc": "PE-TTM(极佳<18)"},
             {"metric": "dv_ratio", "buy": 1.5, "sell": None, "reverse": True, "desc": "股息率"}
         ]
     },
     {
         "code": "600660", "name": "福耀玻璃", "type": "A",
         "rules": [
-            {"metric": "pe_ttm", "buy": 16, "sell": 28, "reverse": False, "desc": "PE(极佳<13)"},
+            {"metric": "pe_ttm", "buy": 16, "sell": 28, "reverse": False, "desc": "PE-TTM(极佳<13)"},
             {"metric": "dv_ratio", "buy": 2.5, "sell": None, "reverse": True, "desc": "股息率"}
         ]
     },
@@ -84,7 +83,7 @@ TARGETS = [
         "code": "00700", "name": "腾讯控股(H)", "type": "H",
         "rules": [
             # 注: AkShare 返回的是标准 PE，非 Non-IFRS，需自行留意差异
-            {"metric": "pe_ttm", "buy": 18, "sell": 30, "reverse": False, "desc": "PE"}
+            {"metric": "pe_ttm", "buy": 18, "sell": 30, "reverse": False, "desc": "PE-TTM"}
         ]
     },
     {
@@ -102,7 +101,7 @@ TARGETS = [
     {
         "code": "00883", "name": "中国海油(H)", "type": "H",
         "rules": [
-            {"metric": "pe_ttm", "buy": 7, "sell": None, "reverse": False, "desc": "PE"},
+            {"metric": "pe_ttm", "buy": 7, "sell": None, "reverse": False, "desc": "PE-TTM"},
             {"metric": "dv_ratio", "buy": 7.0, "sell": 5.5, "reverse": True, "desc": "股息率"}
         ]
     },
@@ -123,34 +122,34 @@ TARGETS = [
     {
         "code": "00941", "name": "中国移动(H)", "type": "H",
         "rules": [
-            {"metric": "pe_ttm", "buy": 11, "sell": None, "reverse": False, "desc": "PE"},
+            {"metric": "pe_ttm", "buy": 11, "sell": None, "reverse": False, "desc": "PE-TTM"},
             {"metric": "dv_ratio", "buy": 6.5, "sell": 4.5, "reverse": True, "desc": "股息率"}
         ]
     },
     {
         "code": "00874", "name": "白云山(H)", "type": "H",
         "rules": [
-            {"metric": "pe_ttm", "buy": 10, "sell": 15, "reverse": False, "desc": "PE"},
+            {"metric": "pe_ttm", "buy": 10, "sell": 15, "reverse": False, "desc": "PE-TTM"},
             {"metric": "dv_ratio", "buy": 4.5, "sell": None, "reverse": True, "desc": "股息率"}
         ]
     },
     {
         "code": "000651", "name": "格力电器", "type": "A",
         "rules": [
-            {"metric": "pe_ttm", "buy": 8, "sell": 12, "reverse": False, "desc": "PE"},
+            {"metric": "pe_ttm", "buy": 8, "sell": 12, "reverse": False, "desc": "PE-TTM"},
             {"metric": "dv_ratio", "buy": 7.0, "sell": None, "reverse": True, "desc": "股息率"}
         ]
     },
     {
         "code": "603288", "name": "海天味业", "type": "A",
         "rules": [
-            {"metric": "pe_ttm", "buy": 22, "sell": 42, "reverse": False, "desc": "PE(极佳<18)"}
+            {"metric": "pe_ttm", "buy": 22, "sell": 42, "reverse": False, "desc": "PE-TTM(极佳<18)"}
         ]
     },
     {
         "code": "002027", "name": "分众传媒", "type": "A",
         "rules": [
-            {"metric": "pe_ttm", "buy": 14, "sell": 23, "reverse": False, "desc": "PE(极佳<11)"}
+            {"metric": "pe_ttm", "buy": 14, "sell": 23, "reverse": False, "desc": "PE-TTM(极佳<11)"}
         ]
     },
 
@@ -168,13 +167,13 @@ TARGETS = [
         "code": "601668", "name": "中国建筑", "type": "A",
         "rules": [
             {"metric": "pb", "buy": 0.55, "sell": 0.8, "reverse": False, "desc": "PB"},
-            {"metric": "pe_ttm", "buy": 5, "sell": None, "reverse": False, "desc": "PE"}
+            {"metric": "pe_ttm", "buy": 5, "sell": None, "reverse": False, "desc": "PE-TTM"}
         ]
     },
     {
         "code": "01099", "name": "国药控股(H)", "type": "H",
         "rules": [
-            {"metric": "pe_ttm", "buy": 8, "sell": 14, "reverse": False, "desc": "PE"},
+            {"metric": "pe_ttm", "buy": 8, "sell": 14, "reverse": False, "desc": "PE-TTM"},
             {"metric": "dv_ratio", "buy": 5.5, "sell": None, "reverse": True, "desc": "股息率"}
         ]
     },
@@ -196,7 +195,7 @@ TARGETS = [
         "rules": [
             # 注: 周期股亏损时 PE 无意义或为负。这里配置仅作参考。
             # CSV: PE < 10 (全行业巨亏), PE > 25 (暴利)
-            {"metric": "pe_ttm", "buy": 10, "sell": 25, "reverse": False, "desc": "PE(需结合周期)"}
+            {"metric": "pe_ttm", "buy": 10, "sell": 25, "reverse": False, "desc": "PE-TTM(需结合周期)"}
         ]
     },
     {
@@ -204,13 +203,13 @@ TARGETS = [
         "rules": [
             # CSV 规则提到 H 股 PE < 8，这里监控 A 股股息和 PE
             {"metric": "dv_ratio", "buy": 8.0, "sell": None, "reverse": True, "desc": "股息率"},
-            {"metric": "pe_ttm", "buy": None, "sell": 12, "reverse": False, "desc": "PE(卖出)"}
+            {"metric": "pe_ttm", "buy": None, "sell": 12, "reverse": False, "desc": "PE-TTM(卖出)"}
         ]
     },
     {
         "code": "601899", "name": "紫金矿业", "type": "A",
         "rules": [
-            {"metric": "pe_ttm", "buy": 15, "sell": 30, "reverse": False, "desc": "PE"},
+            {"metric": "pe_ttm", "buy": 15, "sell": 30, "reverse": False, "desc": "PE-TTM"},
             {"metric": "pb", "buy": None, "sell": 5.5, "reverse": False, "desc": "PB(卖出)"},
             {"metric": "dv_ratio", "buy": 5.0, "sell": None, "reverse": True, "desc": "股息率"}
         ]
@@ -218,113 +217,103 @@ TARGETS = [
 ]
 
 def get_realtime_data(targets):
-    """
-    [精准版] 批量获取 A 股和港股的实时估值数据
-    直接请求东方财富 ulist 接口，只查询目标股票，避免拉取全市场数据导致的超时和缺失。
-    """
     data_map = {}
+    codes = []
     
-    # 1. 构造 secids (东方财富的股票ID)
-    # 规则: 
-    #   沪A(6开头) -> 1.xxxxxx
-    #   深A(0/3开头) -> 0.xxxxxx
-    #   港股 -> 116.xxxxx
-    secids = []
+    print(f"📡 正在精准拉取 {len(targets)} 只目标股票数据 (Tencent API)...")
     
-    # 建立映射: secid -> target_code (用于后续匹配回填)
-    # 因为接口返回的是 1.600519，我们需要知道它对应 targets 里的 600519
-    secid_map = {} 
-
-    print(f"📡 正在精准拉取 {len(targets)} 只目标股票数据...")
-
+    # 1. 构造请求代码列表
     for t in targets:
-        code = t['code']
+        raw_code = t['code']
         stype = t['type']
-        
-        secid = ""
+        api_code = ""
         if stype == 'A':
-            # 简单判断沪深
-            if str(code).startswith('6'):
-                secid = f"1.{code}"
+            # 简单判断沪深: 6开头为沪市(sh), 其他为深市(sz)
+            if str(raw_code).startswith('6'):
+                api_code = f"sh{raw_code}"
             else:
-                secid = f"0.{code}"
+                api_code = f"sz{raw_code}"
         elif stype == 'H':
-            # 港股通常是 116
-            secid = f"116.{code}"
+            # 腾讯港股接口通常使用 r_hk 前缀获取更详细数据
+            api_code = f"r_hk{raw_code}"
             
-        if secid:
-            secids.append(secid)
-            secid_map[secid] = code
+        if api_code:
+            codes.append(api_code)
 
-    # 2. 发送请求
-    # 字段: f12(代码), f14(名称), f2(最新价), f9(PE-TTM), f23(PB), f133(股息率-港), f115(股息率-A)
-    # 注意: A股股息率有时在 f115, 港股在 f133, 我们都请求
-    fields = "f12,f14,f2,f9,f23,f133,f115"
-    secids_str = ",".join(secids)
-    
-    # 使用 ulist.np 接口，这是东方财富的"自选股/个股列表"接口，更加稳定
-    # ut 参数是必要的 token
-    url = "https://push2.eastmoney.com/api/qt/ulist.np/get"
-    params = {
-        "ut": "f057cbcbce2a86e2866ab8877db1d059",
-        "invt": "2",
-        "fltt": "2",
-        "fields": fields,
-        "secids": secids_str
-    }
-    
-    # 伪装浏览器头
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    }
-
-    try:
-        # 尝试直连 (为了兼容某些代理环境，也可以尝试去掉 verify=False)
-        # requests 默认会自动处理 302 重定向
-        resp = requests.get(url, params=params, headers=headers, timeout=10)
+    # 2. 分批请求 (避免 URL 过长)
+    chunk_size = 20
+    for i in range(0, len(codes), chunk_size):
+        chunk = codes[i:i+chunk_size]
+        url = f"http://qt.gtimg.cn/q={','.join(chunk)}"
         
-        if resp.status_code != 200:
-            print(f"⚠️ 接口请求失败: Status {resp.status_code}")
-            return {}
+        try:
+            resp = requests.get(url, timeout=10)
+            # 腾讯接口通常返回 GBK 编码
+            text = resp.content.decode('gbk', errors='ignore')
             
-        res_json = resp.json()
-        if not res_json or 'data' not in res_json or 'diff' not in res_json['data']:
-            print("⚠️ 接口返回数据为空")
-            return {}
-            
-        data_list = res_json['data']['diff']
-        print(f"✅ 成功获取 {len(data_list)} 条数据")
-        
-        for item in data_list:
-            # item 示例: {'f12': '600519', 'f14': '贵州茅台', 'f2': 1500.0, ...}
-            code = item.get('f12')
-            
-            # 解析数据 (注意处理无效值 - )
-            def parse_float(val):
-                if val == '-' or val is None: return 0.0
-                try: return float(val)
-                except: return 0.0
-
-            price = parse_float(item.get('f2'))
-            pe = parse_float(item.get('f9'))
-            pb = parse_float(item.get('f23'))
-            
-            # 股息率: 优先取 f133(港股/部分A), 如果为0则取 f115(A股)
-            dv = parse_float(item.get('f133'))
-            if dv == 0:
-                dv = parse_float(item.get('f115'))
+            parts = text.split(';')
+            for part in parts:
+                if not part.strip() or '="' not in part:
+                    continue
                 
-            data_map[code] = {
-                'price': price,
-                'pe_ttm': pe,
-                'pb': pb,
-                'dv_ratio': dv
-            }
+                name_part, data_part = part.split('="')
+                data_str = data_part.strip('"')
+                fields = data_str.split('~')
+                
+                # 数据校验
+                if len(fields) < 30: continue
+                
+                # 解析代码和类型
+                # 腾讯接口返回的数据中，第3个字段(index 2)通常是代码
+                code_in_resp = fields[2]
+                
+                # 判断是 A 股还是 H 股 (根据 name_part 判断)
+                is_h_share = "hk" in name_part
+                
+                price = 0.0
+                pe = 0.0
+                pb = 0.0
+                dv = 0.0
+                
+                def parse_val(val):
+                    try:
+                        return float(val)
+                    except:
+                        return 0.0
+
+                if is_h_share:
+                    # H股映射:
+                    # Price: 3
+                    # PE-TTM: 57
+                    # PB: 58
+                    # DivYield: 47
+                    if len(fields) > 58:
+                        price = parse_val(fields[3])
+                        pe = parse_val(fields[57])
+                        pb = parse_val(fields[58])
+                        dv = parse_val(fields[47])
+                else:
+                    # A股映射:
+                    # Price: 3
+                    # PE-TTM: 39 (动态PE/TTM)
+                    # PB: 46
+                    # DivYield: 49
+                    if len(fields) > 49:
+                        price = parse_val(fields[3])
+                        pe = parse_val(fields[39])
+                        pb = parse_val(fields[46])
+                        dv = parse_val(fields[49])
+                
+                data_map[code_in_resp] = {
+                    'price': price,
+                    'pe_ttm': pe,
+                    'pb': pb,
+                    'dv_ratio': dv
+                }
+                
+        except Exception as e:
+            print(f"❌ 数据拉取异常: {e}")
             
-    except Exception as e:
-        print(f"❌ 数据拉取异常: {e}")
-        # 这里可以考虑增加重试逻辑
-        
     return data_map
 
 def calculate_percentile(current, buy, sell, reverse=False):
