@@ -297,12 +297,12 @@ def get_realtime_data(targets):
                     # Price: 3
                     # PE-TTM: 39 (动态PE/TTM)
                     # PB: 46
-                    # DivYield: 49
-                    if len(fields) > 49:
+                    # DivYield: 64 (滚动股息率TTM)
+                    if len(fields) > 64:
                         price = parse_val(fields[3])
                         pe = parse_val(fields[39])
                         pb = parse_val(fields[46])
-                        dv = parse_val(fields[49])
+                        dv = parse_val(fields[64])
                 
                 data_map[code_in_resp] = {
                     'price': price,
