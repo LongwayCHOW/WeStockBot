@@ -19,7 +19,8 @@ jobs:
           python-version: "3.9"
 
       - name: Install dependencies
-        run: pip install akshare pandas requests
+        # 只装实际用到的库 (requests + pandas), 不再装 akshare(未使用且安装慢)
+        run: pip install -r requirements.txt
 
       - name: Run Noon Script
         env:

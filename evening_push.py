@@ -21,8 +21,11 @@ def get_market_analysis():
     
     try:
         # 1. 获取今日数据 (Sina 行业板块)
-        url = "http://vip.stock.finance.sina.com.cn/q/view/newSinaHy.php"
-        resp = requests.get(url, timeout=10)
+        url = "https://vip.stock.finance.sina.com.cn/q/view/newSinaHy.php"
+        # 加 UA + https: 避免无 UA 请求被拦截, 海外环境用 https 更稳
+        resp = requests.get(url, timeout=15, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+        })
         # Sina 接口通常是 GBK 编码
         text = resp.content.decode('gbk', errors='ignore')
         

@@ -20,7 +20,8 @@ jobs:
           python-version: '3.9'
 
       - name: Install dependencies
-        run: pip install requests
+        # 只装实际用到的库 (requests + pandas)
+        run: pip install -r requirements.txt
 
       - name: Run script
         env:

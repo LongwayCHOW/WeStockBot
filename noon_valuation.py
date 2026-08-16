@@ -244,10 +244,13 @@ def get_realtime_data(targets):
     chunk_size = 20
     for i in range(0, len(codes), chunk_size):
         chunk = codes[i:i+chunk_size]
-        url = f"http://qt.gtimg.cn/q={','.join(chunk)}"
+        url = f"https://qt.gtimg.cn/q={','.join(chunk)}"
         
         try:
-            resp = requests.get(url, timeout=10)
+            # 加 UA + https: 避免无 UA 请求被拦截, 海外环境用 https 更稳
+            resp = requests.get(url, timeout=15, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+            })
             # 腾讯接口通常返回 GBK 编码
             text = resp.content.decode('gbk', errors='ignore')
             

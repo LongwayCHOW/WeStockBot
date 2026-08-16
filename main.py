@@ -20,11 +20,15 @@ TARGETS = {
 
 def get_sina_data(targets):
     codes = [item['code'] for item in targets.values()]
-    url = f"http://hq.sinajs.cn/list={','.join(codes)}"
-    headers = {"Referer": "https://finance.sina.com.cn/"}
+    url = f"https://hq.sinajs.cn/list={','.join(codes)}"
+    headers = {
+        "Referer": "https://finance.sina.com.cn/",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+    }
 
     try:
-        resp = requests.get(url, headers=headers, timeout=5)
+        # timeout 调大: GitHub Actions(海外)访问国内接口延迟高, 5s 易超时
+        resp = requests.get(url, headers=headers, timeout=15)
         text = resp.text
     except Exception as e:
         return "获取失败", str(e)

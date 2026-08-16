@@ -19,8 +19,8 @@ jobs:
           python-version: "3.9"
 
       - name: Install dependencies
-        # 安装了 pandas 和 akshare
-        run: pip install akshare pandas requests
+        # 只装实际用到的库 (requests + pandas), 不再装 akshare(未使用且安装慢)
+        run: pip install -r requirements.txt
 
       - name: Run Evening Script
         env:
@@ -33,6 +33,6 @@ jobs:
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add data/history_fund_flow.csv
+          git add data/history_sector_sina.csv
           # 只有当文件有变化时才提交，防止报错
           git diff --quiet && git diff --staged --quiet || (git commit -m "Update fund flow data [skip ci]" && git push)
