@@ -1,0 +1,48 @@
+name: Commodity Curve Push
+
+on:
+  schedule:
+    # 北京时间 08:30 = UTC 00:30 (北京时间 = UTC+8)
+    - cron: "30 0 * * *"
+  workflow_dispatch: # 允许手动点击测试
+
+# 需要写权限: 图片要 commit+push 进 charts/ 目录作为"图床"
+permissions:
+  contents: write
+
+jobs:
+  run_commodity_curve:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: |
+          # 中文字体: 防止 matplotlib 图内中文显示为方框
+          sudo apt-get update && sudo apt-get install -y fonts-noto-cjk
+          pip install requests pandas matplotlib
+
+      - name: Render Charts (生成国内外对照图)
+        env:
+          TZ: Asia/Shanghai
+        run: python commodity_curve.py --render-only
+
+      - name: Commit and Push Charts (图片上仓库, 供 raw.githubusercontent 引用)
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add charts/
+          # 只有当图片有变化时才提交, 防止报错
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update commodity charts [skip ci]" && git push)
+
+      - name: Push to WeChat (方糖推送, 引用图片外链)
+        env:
+          SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
+          TZ: Asia/Shanghai
+        run: python commodity_curve.py --push-only
