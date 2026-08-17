@@ -33,12 +33,12 @@ jobs:
           TZ: Asia/Shanghai
         run: python commodity_curve.py --render-only
 
-      - name: Commit and Push Charts (图片上仓库, 供 raw.githubusercontent 引用)
+      - name: Commit and Push Charts (图片+画廊页上仓库, Pages 自动发布)
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add charts/
-          # 只有当图片有变化时才提交, 防止报错
+          git add charts/ index.html
+          # 只有当内容有变化时才提交, 防止报错
           git diff --quiet && git diff --staged --quiet || (git commit -m "Update commodity charts [skip ci]" && git push)
 
       - name: Push to WeChat (方糖推送, 引用图片外链)

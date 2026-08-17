@@ -24,6 +24,7 @@ import datetime
 
 import requests
 import pandas as pd
+from urllib.parse import quote
 
 import matplotlib
 matplotlib.use("Agg")  # 无显示环境, 绘制到文件
@@ -57,9 +58,12 @@ PAIRS = [
     {"dom_symbol": "CF0", "dom_name": "棉花",   "dom_unit": "元/吨",     "intl_symbol": "CT",  "intl_name": "NY棉花", "intl_unit": "美分/磅"},
 ]
 
-# 图片保存目录 & 图床 URL 前缀 (raw.githubusercontent.com 需要在图片 push 之后才可访问)
+# 图片保存目录: charts/YYYY-MM-DD/ 按日期分子目录
 CHARTS_DIR = "charts"
-RAW_URL_PREFIX = "https://raw.githubusercontent.com/LongwayCHOW/WeStockBot/main/charts"
+# 图片走 jsdelivr CDN 加速 (raw.githubusercontent 国内访问不稳)
+JS_URL_PREFIX = "https://cdn.jsdelivr.net/gh/LongwayCHOW/WeStockBot@main/charts"
+# GitHub Pages 画廊入口 (用户微信里打开看全部图片)
+PAGES_URL = "https://longwaychow.github.io/WeStockBot/"
 
 # ================= 数据抓取 =================
 
@@ -176,9 +180,12 @@ def render_pair(pair, dom_s, intl_s):
     plt.title(f"{name} — 近 {days} 个交易日走势对照", fontsize=13)
     fig.autofmt_xdate()
 
-    # 保存: 文件名用代码对, 便于 workflow 与推送复用
-    fname = f"{pair['dom_symbol']}_{pair['intl_symbol']}.png"
-    path = os.path.join(CHARTS_DIR, fname)
+    # 保存: 按日期分子目录, 文件名带品种中文名, 便于用户识别是哪个期货
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    subdir = os.path.join(CHARTS_DIR, today)
+    os.makedirs(subdir, exist_ok=True)
+    fname = f"{pair['dom_name']}-{pair['intl_name']}_{pair['dom_symbol']}-{pair['intl_symbol']}.png"
+    path = os.path.join(subdir, fname)
     fig.savefig(path, dpi=110, bbox_inches="tight")
     plt.close(fig)
 
@@ -189,6 +196,53 @@ def render_pair(pair, dom_s, intl_s):
     return fname, f"**{name}** ({latest}, {days}个交易日)", dom_stat, intl_stat
 
 # ================= 阶段1: 渲染 =================
+
+def generate_index_html():
+    """
+    生成画廊索引页 index.html (GitHub Pages 入口)。
+    页面展示最新日期目录下的全部图片, 图片走 jsdelivr CDN 加速。
+    用户微信里打开 Pages 链接即可浏览全部品种对照图。
+    """
+    date_dirs = [d for d in os.listdir(CHARTS_DIR)
+                 if os.path.isdir(os.path.join(CHARTS_DIR, d)) and d[0].isdigit()]
+    if not date_dirs:
+        print("⚠️ 无日期目录, 跳过画廊页生成")
+        return False
+    latest = sorted(date_dirs)[-1]
+    latest_dir = os.path.join(CHARTS_DIR, latest)
+    pngs = sorted(f for f in os.listdir(latest_dir) if f.endswith(".png"))
+    if not pngs:
+        print("⚠️ 最新日期目录无图片")
+        return False
+
+    # 每张图一个条目: 品种名(从文件名提取) + 图片(jsdelivr CDN 加速)
+    items = []
+    for f in pngs:
+        base = f[:-4]
+        pair_name = base.split("_")[0].replace("-", " vs ")  # "沪金-纽约金" → "沪金 vs 纽约金"
+        img_url = f"{JS_URL_PREFIX}/{latest}/{quote(f)}"
+        items.append(f'<h3>{pair_name}</h3>'
+                     f'<img src="{img_url}" alt="{pair_name}" '
+                     f'style="width:100%;height:auto;margin-bottom:8px;"/>')
+
+    html = f"""<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>每日价格发布 ({latest})</title>
+</head>
+<body style="font-family:sans-serif;max-width:720px;margin:0 auto;padding:12px;background:#f7f7f7;">
+<h2 style="text-align:center;">📈 每日价格发布 — {latest}</h2>
+<p style="text-align:center;color:#888;">大宗商品国内外对照 · 近 900 个交易日</p>
+{''.join(items)}
+</body>
+</html>"""
+    with open("index.html", "w", encoding="utf-8") as f:
+        f.write(html)
+    print(f"✅ 画廊页已生成: index.html ({len(pngs)} 张图)")
+    return True
+
 
 def render_all():
     """抓取全部品种数据并绘制图片, 返回 [(fname, title, dom_stat, intl_stat), ...]"""
@@ -206,6 +260,7 @@ def render_all():
                 results.append(r)
         except Exception as e:
             print(f"❌ {pair['dom_name']}/{pair['intl_name']}: {e}")
+    generate_index_html()
     return results
 
 # ================= 阶段2: 推送 =================
@@ -228,36 +283,53 @@ def push_to_wechat(title, content):
 
 def push_all():
     """
-    遍历 charts/ 目录, 用 raw.githubusercontent.com 外链构造 Markdown 并推送。
-    图片必须在推送前已 commit+push 到仓库, 否则 <img> 会 404。
+    推送 GitHub Pages 画廊链接。
+    背景: 方糖/微信不渲染推送消息中的外链图片, 因此改为推送"打开画廊页"链接,
+    用户微信里点开 GitHub Pages 即可浏览全部图片(图片经 jsdelivr CDN 加速)。
     """
     if not os.path.isdir(CHARTS_DIR):
         print("❌ charts/ 目录不存在, 请先运行 --render-only 生成图片")
         return
 
-    lines = []
-    files = sorted(os.listdir(CHARTS_DIR))
-    if not files:
-        print("❌ charts/ 为空")
+    date_dirs = [d for d in os.listdir(CHARTS_DIR)
+                 if os.path.isdir(os.path.join(CHARTS_DIR, d)) and d[0].isdigit()]
+    if not date_dirs:
+        print("❌ charts/ 无日期目录")
+        return
+    latest = sorted(date_dirs)[-1]
+    latest_dir = os.path.join(CHARTS_DIR, latest)
+    pngs = sorted(f for f in os.listdir(latest_dir) if f.endswith(".png"))
+    if not pngs:
+        print("❌ 最新日期目录无图片")
         return
 
-    for f in files:
-        if not f.endswith(".png"):
-            continue
-        key = f.replace(".png", "")
-        # 从 PAIRS 反查品种中文名(未知的用文件名兜底)
-        p = next((x for x in PAIRS if f"{x['dom_symbol']}_{x['intl_symbol']}" == key), None)
-        title = f"{p['dom_name']} vs {p['intl_name']}" if p else key
-        url = f"{RAW_URL_PREFIX}/{f}"
-        lines.append(f"#### {title}")
-        lines.append(f"<img src=\"{url}\" width=\"100%\">")
-        lines.append("")
+    # 品种清单(推送里列出来, 让用户知道有哪些图)
+    names = []
+    for f in pngs:
+        base = f[:-4]
+        names.append(base.split("_")[0].replace("-", " vs "))
 
-    # Server 酱 desp 支持 Markdown 渲染 <img> 标签
-    content = "# 📈 大宗商品 900 日走势（国内外对照）\n\n" + "\n".join(lines)
-    title = "📈 大宗商品曲线 " + datetime.datetime.now().strftime("%m-%d %H:%M")
+    if len(names) <= 4:
+        name_desc = "：" + "、".join(names)
+    elif len(names) <= 10:
+        name_desc = f"（{len(names)} 个品种：" + "、".join(names[:5]) + " 等）"
+    else:
+        name_desc = f"（{len(names)} 个品种）"
+
+    # GitHub 文件夹直链(备选, 不依赖 Pages)
+    gh_tree_url = "https://github.com/LongwayCHOW/WeStockBot/tree/main/" + os.path.join(CHARTS_DIR, latest)
+
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    content = (
+        f"📅 数据更新：**{latest}**（{now}）\n\n"
+        f"共 **{len(pngs)}** 张国内外对照图{name_desc}\n\n"
+        f"👉 [点击打开每日价格发布画廊]({PAGES_URL})\n\n"
+        f"> 微信内直接打开即可查看; 图片已用 jsdelivr CDN 加速;"
+        f" 备选: [GitHub 文件夹]({gh_tree_url})"
+    )
+    title = f"📈 每日价格发布 {latest}"
     print("--- 预览 ---")
-    print(content[:600])
+    print(content)
     print("-----------")
     push_to_wechat(title, content)
 
