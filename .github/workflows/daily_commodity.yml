@@ -45,7 +45,7 @@ jobs:
             # 防竞态: 推送前先 rebase 远程最新(可能有人手动 push 或上个 Actions 提交)
             # 若 rebase/push 仍失败(竞态), 回滚并跳过本次, 不报红, 下次运行自动重试
             git pull --rebase origin main && git push \
-              || { git rebase --abort 2>/dev/null || true; echo "⚠️ 竞态导致推送失败, 已跳过(下次运行自动重试)"; }
+              || { git rebase --abort 2>/dev/null || true; echo "⚠️ 竞态导致推送失败, 已跳过(下次运行自动重试11)"; }
           fi
 
       - name: Push to WeChat (方糖推送, 引用图片外链)
