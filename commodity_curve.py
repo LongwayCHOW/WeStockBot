@@ -119,19 +119,38 @@ def fetch_intl(symbol):
 
 def setup_chinese_font():
     """
-    配置 matplotlib 中文字体。
-    优先用 Noto Sans CJK (GitHub Actions 中通过 apt 安装), 找不到则回退默认字体
-    (此时中文会显示为方框, 但不影响脚本运行)。
+    配置 matplotlib 中文字体, 防止图内中文显示为方框。
+
+    背景: Ubuntu 的 fonts-noto-cjk 是 ttc 容器(含 SC/TC/JP/KR 多语言 face),
+    matplotlib 通常只注册到第一个 face 的名字(往往是 "Noto Sans CJK JP" 或
+    "Noto Sans CJK SC" 之一, 不同版本不一样), 因此精确名字匹配不可靠。
+    修复策略: 先试名字匹配(含多种变体), 失败则直接按字体文件路径注册。
     """
-    candidates = ["Noto Sans CJK SC", "WenQuanYi Zen Hei", "SimHei", "Microsoft YaHei"]
-    found = None
+    # 1) 名字匹配(覆盖 SC/JP/TC 变体, 因为 ttc 首 face 可能是任意一个)
+    candidates = ["Noto Sans CJK SC", "Noto Sans CJK JP", "Noto Sans CJK TC",
+                  "WenQuanYi Zen Hei", "SimHei", "Microsoft YaHei"]
     for name in candidates:
         if any(name.lower() in f.name.lower() for f in fm.fontManager.ttflist):
-            found = name
-            break
-    if found:
-        plt.rcParams["font.sans-serif"] = [found]
-        plt.rcParams["axes.unicode_minus"] = False
+            plt.rcParams["font.sans-serif"] = [name]
+            plt.rcParams["axes.unicode_minus"] = False
+            return True
+
+    # 2) 名字匹配失败 → 直接按文件路径注册 Ubuntu 的 Noto CJK (apt 安装位置)
+    for fp in ["/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+               "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"]:
+        if os.path.exists(fp):
+            try:
+                fm.fontManager.addfont(fp)
+                face_name = fm.FontProperties(fname=fp).get_name()
+                plt.rcParams["font.sans-serif"] = [face_name]
+                plt.rcParams["axes.unicode_minus"] = False
+                print(f"✅ 中文字体已注册: {face_name} ({fp})")
+                return True
+            except Exception as e:
+                print(f"⚠️ 字体注册失败 {fp}: {e}")
+
+    print("⚠️ 未找到中文字体, 图中中文将显示为方框")
+    return False
 
 def render_pair(pair, dom_s, intl_s):
     """
