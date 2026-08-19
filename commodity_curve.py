@@ -173,7 +173,9 @@ def render_pair(pair, dom_s, intl_s):
     intl_close = df["intl"]
 
     # ---- 绘制双轴图 ----
-    fig, ax1 = plt.subplots(figsize=(11, 5.5))
+    # 宽度 11 英寸时实际输出仅约 1095px(tight裁剪), 900 个交易日挤在一起难看清近期起伏。
+    # 改为 22 英寸宽(输出约 2200px, 翻倍), 高度适度增至 7 防止 4:1 过扁。
+    fig, ax1 = plt.subplots(figsize=(22, 7))
     ax2 = ax1.twinx()
 
     line1, = ax1.plot(dom_close.index, dom_close.values, color="#1f77b4", linewidth=1.4, label=f"{pair['dom_name']}")
