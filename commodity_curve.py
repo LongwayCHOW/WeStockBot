@@ -249,10 +249,10 @@ def generate_index_html():
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>每日价格发布 ({latest})</title>
+<title>每日期货 ({latest})</title>
 </head>
 <body style="font-family:sans-serif;max-width:720px;margin:0 auto;padding:12px;background:#f7f7f7;">
-<h2 style="text-align:center;">📈 每日价格发布 — {latest}</h2>
+<h2 style="text-align:center;">📈 每日期货 — {latest}</h2>
 <p style="text-align:center;color:#888;">大宗商品国内外对照 · 近 900 个交易日</p>
 {''.join(items)}
 </body>
@@ -342,11 +342,11 @@ def push_all():
     content = (
         f"📅 数据更新：**{latest}**（{now}）\n\n"
         f"共 **{len(pngs)}** 张国内外对照图{name_desc}\n\n"
-        f"👉 [点击打开每日价格发布画廊]({PAGES_URL})\n\n"
+        f"👉 [点击打开每日期货画廊]({PAGES_URL})\n\n"
         f"> 微信内直接打开即可查看; 图片已用 jsdelivr CDN 加速;"
         f" 备选: [GitHub 文件夹]({gh_tree_url})"
     )
-    title = f"📈 每日价格发布 {latest}"
+    title = f"📈 每日期货 {latest}"
     print("--- 预览 ---")
     print(content)
     print("-----------")
