@@ -20,6 +20,7 @@ import os
 import re
 import sys
 import json
+import shutil
 import datetime
 
 import requests
@@ -37,6 +38,10 @@ KEYS_STR = os.getenv("SERVERCHAN_KEY", "")
 
 # 观察窗口: 最近 N 个交易日
 N_DAYS = 900
+
+# 网站/仓库保留最近 KEEP_DAYS 个日期目录的图片, 防止仓库无限膨胀
+# (改这里即可调整: 1=只保留当日, 5=最近5天, 0=全部保留)
+KEEP_DAYS = 5
 
 # 国内外对照品种对
 #   dom_symbol: 国内主力连续合约代码(新浪 InnerFuturesNewService)
@@ -265,9 +270,27 @@ def generate_index_html():
     return True
 
 
+def cleanup_old_charts():
+    """
+    清理过期图片: 保留最近 KEEP_DAYS 个日期目录, 删除更早的目录。
+    防止 charts/ 无限膨胀拖大仓库; 画廊页永远只展示最新日期, 所以旧目录删除无影响。
+    """
+    if KEEP_DAYS <= 0:
+        return  # 0 或负数 = 全部保留
+    date_dirs = [d for d in os.listdir(CHARTS_DIR)
+                 if os.path.isdir(os.path.join(CHARTS_DIR, d)) and d[0].isdigit()]
+    date_dirs.sort()
+    if len(date_dirs) <= KEEP_DAYS:
+        return
+    for d in date_dirs[:-KEEP_DAYS]:
+        shutil.rmtree(os.path.join(CHARTS_DIR, d))
+        print(f"🗑️ 已清理过期目录: charts/{d}")
+
+
 def render_all():
     """抓取全部品种数据并绘制图片, 返回 [(fname, title, dom_stat, intl_stat), ...]"""
     os.makedirs(CHARTS_DIR, exist_ok=True)
+    cleanup_old_charts()  # 先清理过期目录, 再生成当天图片
     results = []
     for pair in PAIRS:
         try:
