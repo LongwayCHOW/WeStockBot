@@ -2,8 +2,8 @@ name: Commodity Curve Push
 
 on:
   schedule:
-    # 北京时间 08:30 = UTC 00:30 (北京时间 = UTC+8)
-    - cron: "30 0 * * *"
+    # 北京时间 07:30 = UTC 23:30 (与原盘前推送同步, 合并后一条推送含宏观+期货图)
+    - cron: "30 23 * * *"
   workflow_dispatch: # 允许手动点击测试
 
 # 需要写权限: 图片要 commit+push 进 charts/ 目录作为"图床"

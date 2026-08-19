@@ -43,24 +43,61 @@ N_DAYS = 900
 # (改这里即可调整: 1=只保留当日, 5=最近5天, 0=全部保留)
 KEEP_DAYS = 5
 
-# 国内外对照品种对
+# 国内外对照品种对 (名称带交易所后缀, 明确真实标的)
 #   dom_symbol: 国内主力连续合约代码(新浪 InnerFuturesNewService)
-#   dom_name:   国内品种中文名
+#   dom_name:   国内品种名(含交易所)
 #   dom_unit:   国内价格单位
 #   intl_symbol: 海外品种代码(新浪 GlobalFuturesService)
-#   intl_name:  海外品种中文名
+#   intl_name:  海外品种名(含交易所)
 #   intl_unit:  海外价格单位
 PAIRS = [
-    {"dom_symbol": "AU0", "dom_name": "沪金",   "dom_unit": "元/克",     "intl_symbol": "GC",  "intl_name": "纽约金", "intl_unit": "美元/盎司"},
-    {"dom_symbol": "AG0", "dom_name": "沪银",   "dom_unit": "元/千克",   "intl_symbol": "SI",  "intl_name": "纽约银", "intl_unit": "美元/盎司"},
-    {"dom_symbol": "CU0", "dom_name": "沪铜",   "dom_unit": "元/吨",     "intl_symbol": "HG",  "intl_name": "美铜",   "intl_unit": "美元/磅"},
-    {"dom_symbol": "SC0", "dom_name": "原油",   "dom_unit": "元/桶",     "intl_symbol": "CL",  "intl_name": "纽约原油", "intl_unit": "美元/桶"},
-    {"dom_symbol": "FU0", "dom_name": "燃油",   "dom_unit": "元/吨",     "intl_symbol": "HO",  "intl_name": "燃料油", "intl_unit": "美元/加仑"},
-    {"dom_symbol": "M0",  "dom_name": "豆粕",   "dom_unit": "元/吨",     "intl_symbol": "S",   "intl_name": "CBOT大豆", "intl_unit": "美分/蒲式耳"},
-    {"dom_symbol": "Y0",  "dom_name": "豆油",   "dom_unit": "元/吨",     "intl_symbol": "BO",  "intl_name": "CBOT豆油", "intl_unit": "美分/磅"},
-    {"dom_symbol": "C0",  "dom_name": "玉米",   "dom_unit": "元/吨",     "intl_symbol": "C",   "intl_name": "CBOT玉米", "intl_unit": "美分/蒲式耳"},
-    {"dom_symbol": "SR0", "dom_name": "白糖",   "dom_unit": "元/吨",     "intl_symbol": "SB",  "intl_name": "NY糖",   "intl_unit": "美分/磅"},
-    {"dom_symbol": "CF0", "dom_name": "棉花",   "dom_unit": "元/吨",     "intl_symbol": "CT",  "intl_name": "NY棉花", "intl_unit": "美分/磅"},
+    # ---- 贵金属 & 有色 ----
+    {"dom_symbol": "AU0", "dom_name": "沪金[上期所]",   "dom_unit": "元/克",     "intl_symbol": "GC",  "intl_name": "纽约金[COMEX]",   "intl_unit": "美元/盎司"},
+    {"dom_symbol": "AG0", "dom_name": "沪银[上期所]",   "dom_unit": "元/千克",   "intl_symbol": "SI",  "intl_name": "纽约银[COMEX]",   "intl_unit": "美元/盎司"},
+    {"dom_symbol": "CU0", "dom_name": "沪铜[上期所]",   "dom_unit": "元/吨",     "intl_symbol": "HG",  "intl_name": "美铜[COMEX]",    "intl_unit": "美元/磅"},
+    # ---- 能源 ----
+    {"dom_symbol": "SC0", "dom_name": "原油SC[上期能源]", "dom_unit": "元/桶",   "intl_symbol": "CL",  "intl_name": "WTI原油[NYMEX]", "intl_unit": "美元/桶"},
+    {"dom_symbol": "FU0", "dom_name": "燃料油[上期所]", "dom_unit": "元/吨",   "intl_symbol": "HO",  "intl_name": "取暖油[NYMEX]",   "intl_unit": "美元/加仑"},
+    # ---- 油脂油料 (M0 原误对应到大豆S, 修正为 CBOT 豆粕 SM; 豆一 A0 才对应对大S) ----
+    {"dom_symbol": "M0",  "dom_name": "豆粕[大商所]",  "dom_unit": "元/吨",    "intl_symbol": "SM",  "intl_name": "豆粕[CBOT]",      "intl_unit": "美分/蒲式耳"},
+    {"dom_symbol": "Y0",  "dom_name": "豆油[大商所]",  "dom_unit": "元/吨",    "intl_symbol": "BO",  "intl_name": "豆油[CBOT]",      "intl_unit": "美分/磅"},
+    {"dom_symbol": "A0",  "dom_name": "豆一[大商所]",  "dom_unit": "元/吨",    "intl_symbol": "S",   "intl_name": "大豆[CBOT]",      "intl_unit": "美分/蒲式耳"},
+    # ---- 农产品 ----
+    {"dom_symbol": "C0",  "dom_name": "玉米[大商所]",  "dom_unit": "元/吨",    "intl_symbol": "C",   "intl_name": "玉米[CBOT]",      "intl_unit": "美分/蒲式耳"},
+    {"dom_symbol": "SR0", "dom_name": "白糖[郑商所]",  "dom_unit": "元/吨",    "intl_symbol": "SB",   "intl_name": "11号糖[ICE]",     "intl_unit": "美分/磅"},
+    {"dom_symbol": "CF0", "dom_name": "棉花[郑商所]",  "dom_unit": "元/吨",    "intl_symbol": "CT",   "intl_name": "棉花[ICE]",       "intl_unit": "美分/磅"},
+]
+
+# 盘前宏观指数(合并自 original main.py): 美股/港股指数 + 汇率
+# 新浪实时 hq.sinajs.cn 代码 → 展示名; 期货配对见下方 FUTURE_GROUPS
+MACRO_SYMBOLS = [
+    {"code": "gb_ixic",    "name": "纳指",      "type": "us"},
+    {"code": "gb_inx",     "name": "标普500",   "type": "us"},
+    {"code": "rt_hkHSI",   "name": "恒指",      "type": "hk"},
+    {"code": "fx_susdcny", "name": "美元/人民币", "type": "fx"},
+]
+
+# 盘前期货配对(方案B): 按品种分组, 每组分"海外(hf_, 隔夜动向)+国内(nf_, 昨收)"相邻行方便对比
+#   字段: (分类, 品种, 海外hf代码或无, 海外名, 国内nf代码或无, 国内名)
+FUTURE_GROUPS = [
+    # ---- 贵金属 & 有色 ----
+    ("贵金属", "黄金",   "hf_GC", "COMEX黄金",     "nf_AU0", "沪金[上期所]"),
+    ("贵金属", "白银",   "hf_SI", "COMEX白银",     "nf_AG0", "沪银[上期所]"),
+    ("贵金属", "铜",     "hf_HG", "COMEX美铜",     "nf_CU0", "沪铜[上期所]"),
+    # ---- 能源 ----
+    ("能源",   "原油",   "hf_CL", "NYMEX原油",     "nf_SC0", "原油[上期能源]"),
+    ("能源",   "燃料油", "hf_HO", "取暖油[NYMEX]",  "nf_FU0", "燃料油[上期所]"),
+    ("能源",   "布伦特", "hf_OIL", "ICE布伦特",     None,      None),
+    ("能源",   "天然气", "hf_NG", "NYMEX天然气",   None,      None),
+    # ---- 油脂油料 ----
+    ("油脂油料", "大豆",  "hf_S",  "CBOT大豆",     "nf_A0", "豆一[大商所]"),
+    ("油脂油料", "豆粕",  "hf_SM", "CBOT豆粕",     "nf_M0", "豆粕[大商所]"),
+    ("油脂油料", "豆油",  "hf_BO", "CBOT豆油",     "nf_Y0", "豆油[大商所]"),
+    # ---- 农产品 ----
+    ("农产品", "玉米",    "hf_C",  "CBOT玉米",     "nf_C0", "玉米[大商所]"),
+    ("农产品", "小麦",    "hf_W",  "CBOT小麦",     None,      None),
+    ("农产品", "棉花",    "hf_CT", "ICE棉花",      "nf_CF0", "棉花[郑商所]"),
+    ("农产品", "白糖",    "hf_SB", "ICE11号糖",    "nf_SR0", "白糖[郑商所]"),
 ]
 
 # 图片保存目录: charts/YYYY-MM-DD/ 按日期分子目录
@@ -119,6 +156,111 @@ def fetch_intl(symbol):
     url = (f"https://stock2.finance.sina.com.cn/futures/api/jsonp.php/"
            f"var%20t=/GlobalFuturesService.getGlobalFuturesDailyKLine?symbol={symbol}")
     return fetch_ohlc(url)
+
+
+def fetch_macro():
+    """
+    抓取盘前宏观行情(合并自原 main.py 盘前推送): 美股/港股指数 + 美元汇率。
+    数据源: 新浪实时行情 hq.sinajs.cn; 返回多行文本用于推送。
+    """
+    codes = [m["code"] for m in MACRO_SYMBOLS]
+    url = f"https://hq.sinajs.cn/list={','.join(codes)}"
+    try:
+        resp = requests.get(url, timeout=15, headers={
+            "Referer": "https://finance.sina.com.cn/",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+        })
+        text = resp.text
+    except Exception as e:
+        return f"⚠️ 宏观数据获取失败: {e}"
+
+    lines = []
+    for m in MACRO_SYMBOLS:
+        match = re.search(rf'var hq_str_{m["code"]}="(.*?)";', text)
+        if not match:
+            lines.append(f"⚪ **{m['name']}**: 无数据")
+            continue
+        parts = match.group(1).split(',')
+        try:
+            if m["type"] == "us":
+                price, change_pct = float(parts[1]), float(parts[2])
+                fmt = f"{price:,.2f} ({change_pct:+.2f}%)"
+            elif m["type"] == "hk":
+                price, change_pct = float(parts[6]), float(parts[8])
+                fmt = f"{price:,.2f} ({change_pct:+.2f}%)"
+            else:  # fx 汇率: 只显示价格
+                price = float(parts[1])
+                change_pct = 0.0
+                fmt = f"{price:.4f}"
+            icon = "🔴" if change_pct > 0 else ("🟢" if change_pct < 0 else "⚪")
+            lines.append(f"{icon} **{m['name']}**: {fmt}")
+        except Exception:
+            lines.append(f"⚪ **{m['name']}**: 解析出错")
+    return "\n".join(lines)
+
+
+def fetch_futures():
+    """
+    抓取盘前期货配对行情(方案B)。
+    按 FUTURE_GROUPS 分组: 海外(hf_)显示隔夜涨跌幅, 国内(nf_)盘前未开盘显示昨收价;
+    同一品种海外/国内相邻两行, 方便对比。
+    """
+    # 批量请求所有海外+国内代码
+    codes = []
+    for _cat, _nm, hf, _hnm, nf, _dnm in FUTURE_GROUPS:
+        if hf:
+            codes.append(hf)
+        if nf:
+            codes.append(nf)
+    url = f"https://hq.sinajs.cn/list={','.join(codes)}"
+    try:
+        resp = requests.get(url, timeout=15, headers={
+            "Referer": "https://finance.sina.com.cn/",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+        })
+        text = resp.text
+    except Exception as e:
+        return f"⚠️ 期货数据获取失败: {e}"
+
+    # 解析: data[sym] = (价格, 昨结/昨收)
+    data = {}
+    for sym in codes:
+        match = re.search(rf'var hq_str_{sym}="(.*?)";', text)
+        if not match:
+            continue
+        parts = match.group(1).split(',')
+        try:
+            if sym.startswith("hf_"):
+                # 海外期货: parts[0]=现价, parts[7]=昨结
+                price = float(parts[0])
+                prev = float(parts[7]) if parts[7] else price
+            else:
+                # 国内期货(nf_): parts[2]=最新价(盘前即昨收)
+                price = float(parts[2])
+                prev = price  # 昨收价无当日涨跌幅
+            data[sym] = (price, prev)
+        except Exception:
+            continue
+
+    lines = []
+    cur_cat = None
+    for cat, _nm, hf, hname, nf, dname in FUTURE_GROUPS:
+        if cat != cur_cat:
+            lines.append(f"\n**{cat}**")
+            cur_cat = cat
+
+        # 海外行(隔夜动向)
+        if hf and hf in data:
+            price, prev = data[hf]
+            pct = ((price - prev) / prev * 100) if prev else 0.0
+            icon = "🔴" if pct > 0 else ("🟢" if pct < 0 else "⚪")
+            lines.append(f"{icon} {hname}: {price:,.2f} ({pct:+.2f}%)")
+        # 国内行(昨收, 紧跟海外行方便对比)
+        if nf and nf in data:
+            price, _ = data[nf]
+            lines.append(f"     {dname}: {price:,.2f}（昨收）")
+    return "\n".join(lines)
+
 
 # ================= 绘图 =================
 
@@ -363,15 +505,18 @@ def push_all():
     # GitHub 文件夹直链(备选, 不依赖 Pages)
     gh_tree_url = "https://github.com/LongwayCHOW/WeStockBot/tree/main/" + os.path.join(CHARTS_DIR, latest)
 
+    # 盘前宏观快照(指数/汇率 + 期货配对), 放在推送最顶部
+    macro = fetch_macro() + "\n\n" + fetch_futures()
+
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     content = (
-        f"📅 数据更新：**{latest}**（{now}）\n\n"
-        f"共 **{len(pngs)}** 张国内外对照图{name_desc}\n\n"
+        f"**🌍 盘前宏观**\n{macro}\n\n"
+        f"**📈 期货走势**：共 **{len(pngs)}** 张国内外对照图{name_desc}\n\n"
         f"👉 [点击打开每日期货画廊]({PAGES_URL})\n\n"
         f"> 微信内直接打开即可查看; 图片已用 jsdelivr CDN 加速;"
         f" 备选: [GitHub 文件夹]({gh_tree_url})"
     )
-    title = f"📈 每日期货 {latest}"
+    title = f"🌍盘前 📈每日期货 {latest}"
     print("--- 预览 ---")
     print(content)
     print("-----------")
