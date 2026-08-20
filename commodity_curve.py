@@ -196,7 +196,8 @@ def fetch_macro():
             lines.append(f"{icon} **{m['name']}**: {fmt}")
         except Exception:
             lines.append(f"⚪ **{m['name']}**: 解析出错")
-    return "\n".join(lines)
+    # 方糖 desp 是 Markdown: 单 \n 不换行会挤成一行, 必须用 \n\n(空行)让每项独立成行
+    return "\n\n".join(lines)
 
 
 def fetch_futures():
@@ -259,7 +260,8 @@ def fetch_futures():
         if nf and nf in data:
             price, _ = data[nf]
             lines.append(f"     {dname}: {price:,.2f}（昨收）")
-    return "\n".join(lines)
+    # 方糖 desp 是 Markdown: 单 \n 在 Markdown 中不会换行, 必须用 \n\n(空行)才能让每个品种独立成行
+    return "\n\n".join(lines)
 
 
 # ================= 绘图 =================
