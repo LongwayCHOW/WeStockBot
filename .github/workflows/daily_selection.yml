@@ -1,0 +1,42 @@
+name: Weekly Stock Selection Push
+
+on:
+  schedule:
+    # 北京时间周五 08:00 = UTC 00:00 (通常为每周最后一个交易日早上)
+    - cron: "0 0 * * 5"
+  workflow_dispatch: # 允许手动点击测试
+
+jobs:
+  run_selection:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: pip install pandas requests
+
+      - name: Fetch A-share snapshot (新浪全市场)
+        env:
+          TZ: Asia/Shanghai
+        run: python strategies_script/fetch_a_share_snapshot.py --output data/a_share_snapshot.csv
+
+      - name: Run selection strategy (小市值低价 top5)
+        env:
+          TZ: Asia/Shanghai
+        run: |
+          python "strategies_script/gha_小市值+低价股+10万块_小市值最小top5_每周五.py" \
+            --input data/a_share_snapshot.csv \
+            --as-of "$(date +%F)" \
+            --output data/selection.json
+
+      - name: Push to WeChat (方糖)
+        env:
+          SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
+          TZ: Asia/Shanghai
+        run: python strategies_script/push_selection.py --input data/selection.json

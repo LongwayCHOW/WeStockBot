@@ -1,2 +1,4 @@
 sessions/
 __pycache__/
+data/a_share_snapshot.csv
+data/selection.json
