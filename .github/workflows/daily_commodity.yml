@@ -1,10 +1,9 @@
 name: Commodity Curve Push
 
 on:
-  schedule:
-    # 北京时间 07:30 = UTC 23:30 (与原盘前推送同步, 合并后一条推送含宏观+期货图)
-    - cron: "30 23 * * *"
-  workflow_dispatch: # 允许手动点击测试
+  # 定时调度已上收至 daily_orchestrator.yml (唯一入口, 窗口 07:30~09:30 北京时间)
+  # 本文件仅作手动单独触发/调试使用
+  workflow_dispatch:
 
 # 需要写权限: 图片要 commit+push 进 charts/ 目录作为"图床"
 permissions:

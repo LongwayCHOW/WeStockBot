@@ -1,0 +1,40 @@
+name: Daily Orchestrator (唯一入口)
+
+on:
+  # 每 30 分钟轮询一次, 由 run_daily.py 对照任务表决定此刻该跑哪些脚本。
+  # 任务窗口宽 1.5~2 小时, 单次调度被 GitHub 延迟/跳过都不影响最终执行(根治"漏跑")。
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch: # 允许手动测试
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-orchestrator
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Shanghai
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: |
+          # 中文字体: 防止 matplotlib 图内中文显示为方框
+          sudo apt-get update && sudo apt-get install -y fonts-noto-cjk
+          pip install -r requirements.txt
+
+      - name: Run Daily Dispatch (任务表驱动)
+        env:
+          SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
+        run: python run_daily.py

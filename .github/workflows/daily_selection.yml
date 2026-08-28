@@ -1,10 +1,9 @@
 name: Weekly Stock Selection Push
 
 on:
-  schedule:
-    # 北京时间周五 08:00 = UTC 00:00 (通常为每周最后一个交易日早上)
-    - cron: "0 0 * * 5"
-  workflow_dispatch: # 允许手动点击测试
+  # 定时调度已上收至 daily_orchestrator.yml (唯一入口, 每周五 08:00~10:00 北京时间窗口)
+  # 本文件仅作手动单独触发/调试使用
+  workflow_dispatch:
 
 jobs:
   run_selection:

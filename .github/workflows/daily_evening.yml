@@ -1,10 +1,9 @@
 name: Evening A-Share Push
 
 on:
-  schedule:
-    # 北京时间 16:35 = UTC时间 8:35
-    - cron: "35 8 * * *"
-  workflow_dispatch: # 允许手动点击测试
+  # 定时调度已上收至 daily_orchestrator.yml (唯一入口, 窗口 16:35~18:30 北京时间)
+  # 本文件仅作手动单独触发/调试使用
+  workflow_dispatch:
 
 jobs:
   run_evening_analysis:
