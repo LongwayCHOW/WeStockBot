@@ -51,7 +51,7 @@ TASKS = [
         # 每周五选股推送 (原 daily_selection.yml), 维持周五早 08:00 时段
         "name": "weekly_selection",
         "days": [4],                              # 仅周五
-        "window": (8, 0, 12, 0),                  # 周五 08:00 起 (保持原时段语义); 窗口放宽到中午, 防 cron 延迟导致当日漏跑
+        "window": (8, 0, 16, 0),                  # 周五 08:00 起 (保持原时段语义); 容忍窗放宽到下午, 防 GitHub 极端延迟(实测可达7.5h)导致当日漏跑
         "cmd": (
             "python strategies_script/fetch_a_share_snapshot.py --output data/a_share_snapshot.csv && "
             'python "strategies_script/gha_小市值+低价股+10万块_小市值最小top5_每周五.py" '
