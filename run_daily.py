@@ -41,7 +41,8 @@ TASKS = [
         # 每日期货走势图 (原 daily_commodity.yml)
         "name": "commodity",
         "days": None,
-        "window": (7, 30, 9, 30),                 # 北京时间 07:30 起
+        "window": (7, 30, 11, 30),                 # 北京时间 07:30 起; 窗口放宽到中午, 产物是历史走势图无时效性
+                    # (GitHub cron 实测可延迟数小时, 窗口内每次触发都是候选)
         "cmd": "python commodity_curve.py --render-only",
         "push_paths": ["charts/", "index.html"],
         "after_cmd": "python commodity_curve.py --push-only",
@@ -50,7 +51,7 @@ TASKS = [
         # 每周五选股推送 (原 daily_selection.yml), 维持周五早 08:00 时段
         "name": "weekly_selection",
         "days": [4],                              # 仅周五
-        "window": (8, 0, 10, 0),
+        "window": (8, 0, 12, 0),                  # 周五 08:00 起 (保持原时段语义); 窗口放宽到中午, 防 cron 延迟导致当日漏跑
         "cmd": (
             "python strategies_script/fetch_a_share_snapshot.py --output data/a_share_snapshot.csv && "
             'python "strategies_script/gha_小市值+低价股+10万块_小市值最小top5_每周五.py" '
