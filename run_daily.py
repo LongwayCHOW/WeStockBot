@@ -19,12 +19,18 @@ run_daily.py — WeStockBot 统一调度唯一入口
     1) 新脚本照老套路写一个独立 workflow(仅 workflow_dispatch, 可手动单独触发)
     2) 在下方 TASKS 增加一条记录(名称/窗口/命令/需提交的产物文件)
     无需改动本脚本的调度逻辑。
+
+Weekly 选股调度规则变更:
+    原: 每周五固定执行
+    现: 每周最后一个交易日执行(通过新浪上证指数日线接口判断交易日历),
+        仍在周五 08:00~16:00 窗口内; 若周五停牌则自动顺延到周四/周三...
 """
 import datetime
 import json
 import os
 import subprocess
 import sys
+import requests
 
 # ---------------------------------------------------------------------------
 # 任务表 (唯一决策依据)
@@ -48,10 +54,10 @@ TASKS = [
         "after_cmd": "python commodity_curve.py --push-only",
     },
     {
-        # 每周五选股推送 (原 daily_selection.yml), 维持周五早 08:00 时段
+        # 每周最后一个交易日选股推送 (原 daily_selection.yml, 改为交易日历驱动)
         "name": "weekly_selection",
-        "days": [4],                              # 仅周五
-        "window": (8, 0, 16, 0),                  # 周五 08:00 起 (保持原时段语义); 容忍窗放宽到下午, 防 GitHub 极端延迟(实测可达7.5h)导致当日漏跑
+        "days": None,                               # 不再写死周五, 由交易日历判断
+        "window": (8, 0, 16, 0),                    # 交易日 08:00 起 (保持原时段语义); 容忍窗放宽到下午, 防 GitHub 极端延迟导致当日漏跑
         "cmd": (
             "python strategies_script/fetch_a_share_snapshot.py --output data/a_share_snapshot.csv && "
             'python "strategies_script/gha_小市值+低价股+10万块_小市值最小top5_每周五.py" '
@@ -83,6 +89,45 @@ TASKS = [
 
 STATE_FILE = ".run_state.json"   # 记录各任务当天是否已执行 (跨 run 防重, 随产物一起 push)
 GIT_USER = "github-actions[bot]"
+
+
+# ------------------------------- 交易日历判断 ------------------------------
+SINA_INDEX_KLINE = (
+    "https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/"
+    "CN_MarketData.getKLineData"
+)
+
+
+def fetch_recent_trade_days(n=10):
+    """获取最近 N 个交易日(返回 datetime.date 列表, 倒序最新在前)。"""
+    try:
+        resp = requests.get(
+            SINA_INDEX_KLINE,
+            params={"symbol": "sh000001", "scale": 240, "ma": 5, "datalen": n},
+            timeout=10,
+        )
+        data = resp.json()
+        if not data:
+            return []
+        return [datetime.datetime.strptime(d["day"], "%Y-%m-%d").date() for d in data]
+    except Exception as e:
+        print(f"⚠️ 获取交易日历失败: {e}")
+        return []
+
+
+def is_last_trade_day_of_week(today, trade_days):
+    """判断 today 是否为本周最后一个交易日。trade_days: 最近交易日列表(倒序)。"""
+    if today not in trade_days:
+        return False
+    td_sorted = sorted(trade_days)          # 正序(旧→新)
+    idx = td_sorted.index(today)
+    # 如果是列表中最新的交易日, 或者下一个交易日跨周(下周一 > 本周一)
+    if idx == len(td_sorted) - 1:
+        return True
+    next_day = td_sorted[idx + 1]
+    this_monday = today - datetime.timedelta(days=today.weekday())
+    next_monday = next_day - datetime.timedelta(days=next_day.weekday())
+    return next_monday > this_monday
 
 
 # ------------------------------- 工具函数 ----------------------------------
@@ -167,6 +212,7 @@ def push_changes(push_paths):
 def main():
     now = shanghai_now()
     today = now.strftime("%Y-%m-%d")
+    today_date = now.date()
     print(f"== 调度器运行: 北京时间 {now.strftime('%Y-%m-%d %H:%M %A')} ==")
 
     # 开工前同步最新状态(他人 push 的新标记/新代码), 失败静默(本地工作树此刻是干净的)
@@ -176,6 +222,26 @@ def main():
 
     # 决策: 当前时刻该跑哪些任务 (窗口内 + 当天未执行)
     due = [t for t in TASKS if in_window(now, t) and state.get(t["name"]) != today]
+
+    # Weekly 选股额外判断: 必须是本周最后一个交易日
+    trade_days = None
+    filtered_due = []
+    for task in due:
+        if task["name"] == "weekly_selection":
+            if trade_days is None:
+                trade_days = fetch_recent_trade_days(10)
+            if not trade_days:
+                # 获取失败: 回退到原周五判断, 打印警告
+                print("⚠️ 交易日历获取失败, 回退到周五固定判断")
+                if now.weekday() != 4:
+                    print(f"⏭️ 今日非周五, 跳过 weekly_selection")
+                    continue
+            elif not is_last_trade_day_of_week(today_date, trade_days):
+                print(f"⏭️ 今日 {today_date} 非本周最后一个交易日, 跳过 weekly_selection")
+                continue
+        filtered_due.append(task)
+
+    due = filtered_due
     if not due:
         print("⏳ 当前不在任何任务窗口(或今日任务均已执行), 本轮空跑")
         return 0
